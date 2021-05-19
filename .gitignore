@@ -1,0 +1,4 @@
+datasets/100m-dataset/csvs
+datasets/100m-dataset/cvss.parquet
+datasets/100m-dataset/findings.parquet
+datasets/100m-dataset/compnames.parquet

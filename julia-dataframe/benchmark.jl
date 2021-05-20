@@ -14,8 +14,8 @@ println("DATA ROOT", DATA_ROOT)
 DATASET_DIR = joinpath(DATA_ROOT, "100m-dataset/csvs")
 # DATASET_DIR = joinpath(DATA_ROOT, "1b-dataset-parquet/csvs")
 
-inputFile = joinpath(DATASET_DIR, "findings.csv");
-nameFile = joinpath(DATASET_DIR, "compnames.csv");
+findingsFile = joinpath(DATASET_DIR, "findings.csv");
+compNameFile = joinpath(DATASET_DIR, "compnames.csv");
 cvssFile = joinpath(DATASET_DIR, "cvss.csv");
 
 # Everything below here is a bit messy / was adjusted for running benchmarks ... at the expense of
@@ -29,10 +29,10 @@ function main(mode)
 
   if "leftjoin" == mode
     for _ = 1:numIters + 1
-      findingsData  = DataFrame(CSV.File(inputFile))
-      nameData = DataFrame(CSV.File(nameFile))
+      findings  = DataFrame(CSV.File(findingsFile))
+      nameData = DataFrame(CSV.File(compNameFile))
 
-      @time leftjoin(findingsData, nameData, on = :eid)
+      @time leftjoin(nameData, findings, on = :eid)
 
       # Free the RAMs!
       findingsData = nothing

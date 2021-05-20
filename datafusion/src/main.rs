@@ -15,7 +15,6 @@ const BILLION: ParquetPath = "1b-dataset-parquet";
 // Directory containing parquet files.
 const COMPNAMES_DIR: ParquetPath = "compnames.parquet";
 const CVSS_DIR: ParquetPath = "cvss.parquet";
-const FINDINGS_DIR: ParquetPath = "findings.parquet";
 
 // Dataset to use
 const DATASET: ParquetPath = MILLION;

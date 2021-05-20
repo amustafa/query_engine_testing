@@ -24,8 +24,8 @@ Max Mem should be calculated using `/usr/bin/time -l`
 | Query Engine                                   | Join     | Transform  | Filter     | Aggregate/Groupby | Max Mem           | Rough CPU        |
 | -----------------------------------------------| -------  | ---------- | --------   | ----------------- | ----------------- | ---------------- |
 | DataFusion  (batch=65536, num partitions = 12) | 3.93 s   | 182ms      | 618ms      | 19                | 6.7 GB            | 700%             |
-| Julia/DataFrames (min/max)                     | 0.5/1.9 s| 1.7/1.8 s  | 0.46/1.47 s| 9.8/11 s          | 0.95 GB           | 100%             |
-| Polars                                         | 22 s     | 0.4 s      | 2 s        | 9.8 s             | 0.95 GB           | 700%             |
+| Julia/DataFrames (min/max)                     | 0.7/2.2 s| 1.7/1.8 s  | 0.46/1.47 s| 9.8/11 s          | 0.95 GB           | 100%             |
+| Polars                                         | 22 s     | 0.4 s      | 2 s        | 9.8 s             | 1.8 GB            | 700%             |
 
 
 Notes:

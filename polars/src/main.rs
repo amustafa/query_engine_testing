@@ -1,14 +1,13 @@
+use glob::glob;
 use polars::prelude::*;
 use polars::toggle_string_cache;
 use std::fs::File;
 use std::time::SystemTime;
-use glob::glob;
 
 #[global_allocator]
 static ALLOC: snmalloc_rs::SnMalloc = snmalloc_rs::SnMalloc;
 
 type ParquetPath = &'static str;
-
 
 // Directory of dataset to use.
 const MILLION: ParquetPath = "100m-dataset";
@@ -39,7 +38,9 @@ fn read_parquet_dir(path: String) -> Result<LazyFrame> {
         if let Ok(path) = entry {
             // println!("{:?}", path);
             let f = File::open(path.display().to_string())?;
-            let df = ParquetReader::new(f).finish().expect("failed to parse parquet");
+            let df = ParquetReader::new(f)
+                .finish()
+                .expect("failed to parse parquet");
 
             // This is the first dataframe, so replace the existing one in order to use the correct
             // schema.
@@ -54,6 +55,18 @@ fn read_parquet_dir(path: String) -> Result<LazyFrame> {
     }
 
     println!("Total rows: {}", main.height());
+
+    // Polars is faster with contiguous memory
+    main.rechunk();
+
+    // String data copying is expensive
+    for i in 0..main.width() {
+        main.may_apply_at_idx(i, |s| match s.dtype() {
+            DataType::Utf8 => s.cast::<CategoricalType>(),
+            _ => Ok(s.clone()),
+        });
+    }
+
     Ok(main.lazy())
 }
 
@@ -62,8 +75,12 @@ fn join(compnames: &LazyFrame, cves: &LazyFrame) -> Result<u128> {
     let cloned = cves.clone();
     let compnames_clone = compnames.clone();
     let now = SystemTime::now();
-    compnames_clone.left_join(cloned, col("eid"), col("eid"), None).collect()?;
-    let elapsed = now.elapsed().expect("something went wrong with the time thingy");
+    compnames_clone
+        .left_join(cloned, col("eid"), col("eid"), None)
+        .collect()?;
+    let elapsed = now
+        .elapsed()
+        .expect("something went wrong with the time thingy");
     Ok(elapsed.as_millis())
 }
 
@@ -73,14 +90,20 @@ fn transform(cves: &LazyFrame) -> Result<u128> {
     let now = SystemTime::now();
 
     cloned
-        .map(|df: DataFrame| -> Result<DataFrame> {
-            let mut copy = df;
-            copy.apply("cvss", |series| series * 10)?;
-            Ok(copy)
-        }, None, None)
+        .map(
+            |df: DataFrame| -> Result<DataFrame> {
+                let mut copy = df;
+                copy.apply("cvss", |series| series * 10)?;
+                Ok(copy)
+            },
+            None,
+            None,
+        )
         .collect()?;
 
-    let elapsed = now.elapsed().expect("something went wrong with the time thingy");
+    let elapsed = now
+        .elapsed()
+        .expect("something went wrong with the time thingy");
     Ok(elapsed.as_millis())
 }
 
@@ -94,7 +117,9 @@ fn groupby_agg(cves: &LazyFrame) -> Result<u128> {
         .agg(vec![col("cvss").sum()])
         .collect()?;
 
-    let elapsed = now.elapsed().expect("something went wrong with the time thingy");
+    let elapsed = now
+        .elapsed()
+        .expect("something went wrong with the time thingy");
     Ok(elapsed.as_millis())
 }
 
@@ -103,11 +128,11 @@ fn filter(cves: &LazyFrame) -> Result<u128> {
     let cloned = cves.clone();
     let now = SystemTime::now();
 
-    cloned
-        .filter(col("cvss").lt(lit(0.5)))
-        .collect()?;
+    cloned.filter(col("cvss").lt(lit(0.5))).collect()?;
 
-    let elapsed = now.elapsed().expect("something went wrong with the time thingy");
+    let elapsed = now
+        .elapsed()
+        .expect("something went wrong with the time thingy");
     Ok(elapsed.as_millis())
 }
 
@@ -131,34 +156,39 @@ fn compliance_findings(lf: &LazyFrame) -> Result<LazyFrame> {
         .agg(vec![col("eid").count()])
         .with_column_renamed("eid_count", "eid_fail_count");
 
-     let result = lf
+    let result = lf
         .clone()
         .groupby(vec![col("eid")])
         .agg(vec![col("eid").count()])
         .inner_join(fail_lf, col("eid"), col("eid"), None)
-        .map(|df: DataFrame| -> Result<DataFrame> {
-            let total_col = df
-                .column("eid_count")?
-                .cast_with_dtype(&DataType::Float64)?;
+        .map(
+            |df: DataFrame| -> Result<DataFrame> {
+                let total_col = df
+                    .column("eid_count")?
+                    .cast_with_dtype(&DataType::Float64)?;
 
-            let fail_col = df
-                .column("eid_fail_count")?
-                .cast_with_dtype(&DataType::Float64)?;
+                let fail_col = df
+                    .column("eid_fail_count")?
+                    .cast_with_dtype(&DataType::Float64)?;
 
-            // calc eid_count / eid_fail_count and add as col named "pct_failed"
-            let mut pct_failed = &fail_col / &total_col;
-            pct_failed.rename("pct_failed");
+                // calc eid_count / eid_fail_count and add as col named "pct_failed"
+                let mut pct_failed = &fail_col / &total_col;
+                pct_failed.rename("pct_failed");
 
-            // add new pct_failed col to the df
-            df.hstack(&[pct_failed])
-        }, None, None);
+                // add new pct_failed col to the df
+                df.hstack(&[pct_failed])
+            },
+            None,
+            None,
+        );
 
-     Ok(result)
+    Ok(result)
 }
 
 fn main() -> Result<()> {
     toggle_string_cache(true);
-    let create_path = |dataset: ParquetPath, dir: ParquetPath| format!("{}/{}/{}", get_data_root(), dataset, dir);
+    let create_path =
+        |dataset: ParquetPath, dir: ParquetPath| format!("{}/{}/{}", get_data_root(), dataset, dir);
 
     let compnames = read_parquet_dir(create_path(DATASET, COMPNAMES_DIR))?;
     let cves = read_parquet_dir(create_path(DATASET, CVSS_DIR))?;

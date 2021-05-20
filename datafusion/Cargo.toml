@@ -8,11 +8,9 @@ edition = "2018"
 
 [dependencies]
 tokio = "^1.5.0"
-rand = "^0.8.3"
-csv = "^1.1.6"
-glob = "^0.3.0"
 # datafusion has unreleased bug fixes on joins that are necessary. Needs custom version of arrow to function
 datafusion = { git = "https://github.com/apache/arrow-datafusion", branch = "master" }
+snmalloc-rs = {version = "0.2", features= ["cache-friendly"]}
 
 [profile.release]
 debug = true
